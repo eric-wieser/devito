@@ -1,6 +1,6 @@
 import numpy as np
 from devito.logger import warning
-from devito import TimeFunction, Function, Dimension, Eq, Constant
+from devito import TimeFunction, Function, Dimension, Eq, ConditionalDimension
 from devito import Operator
 from examples.seismic import RickerSource, TimeAxis
 from examples.seismic import Model
@@ -73,7 +73,6 @@ assert(source_id.data[nzinds[0][len(nzinds[0])-1], nzinds[1][len(nzinds[0])-1],
        nzinds[2][len(nzinds[0])-1]] == len(nzinds[0]))
 
 warning("---Source_mask and source_id is built here-------")
-import pdb; pdb.set_trace()
 
 nnz_shape = (model.grid.shape[0], model.grid.shape[1])  # Change only 3rd dim
 x, y, z = model.grid.dimensions
@@ -106,10 +105,13 @@ assert(len(sp_source_mask.dimensions) == 3)
 
 # time, p_src = src.dimensions
 
-id_dim = Dimension(name='id_dim')
+x, y, z = model.grid.dimensions
+time, p_src = src.dimensions
+
+id_dim = ConditionalDimension(name='id_dim', parent=p_src, factor=1)
 
 save_src = TimeFunction(name='save_src', shape=(src.shape[0], maxz),
-                        dimensions=(src.dimensions[0], src.dimensions[1]))
+                        dimensions=(src.dimensions[0], id_dim))
 
 
 # src_term = src.inject(field=save_src[time, source_id[x,y,z]], expr=src)
@@ -117,11 +119,9 @@ save_src = TimeFunction(name='save_src', shape=(src.shape[0], maxz),
 
 # tmp = source_id
 
-x, y, z = model.grid.dimensions
-time, p_src = src.dimensions
+src_term = src.inject(field=save_src[time, source_id], expr=src)
 
-src_term = src.inject(field=save_src[time, source_id], expr=src[time, p_src])
-
+redir_term = Eq(save_src[time, id_dim], source_id)
 
 op = Operator([src_term])
 print(op.ccode)
