@@ -70,6 +70,7 @@ jobs:
       if: matrix.name == 'pytest-gpu-acc'
       run: |
         DEVITO_MPI=1 mpirun -n 2 py.test examples/seismic/elastic/elastic_example.py
+        DEVITO_MPI=1 mpirun -n 2 py.test examples/seismic/tti/tti_example.py
         DEVITO_MPI=1 mpirun -n 2 py.test examples/seismic/viscoacoustic/viscoacoustic_example.py
         DEVITO_MPI=1 mpirun -n 2 py.test examples/seismic/viscoelastic/viscoelastic_example.py
 
