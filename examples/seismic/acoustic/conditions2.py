@@ -108,20 +108,24 @@ assert(len(sp_source_mask.dimensions) == 3)
 x, y, z = model.grid.dimensions
 time, p_src = src.dimensions
 
-id_dim = ConditionalDimension(name='id_dim', parent=p_src, factor=1)
-
-save_src = TimeFunction(name='save_src', shape=(src.shape[0], maxz),
-                        dimensions=(src.dimensions[0], id_dim))
+id_dim = Dimension(name='id_dim')
 
 
-# src_term = src.inject(field=save_src[time, source_id[x,y,z]], expr=src)
+save_src = TimeFunction(name='save_src', grid=model.grid, shape=(src.shape[0], maxz),
+                        dimensions=(u.dimensions[0], u.dimensions[1]))
+
+u2 = Function(name="u2", grid=model.grid, time_order=2, space_order=2)
+
+
+#save_src = RickerSource(name='save_src', grid=model.grid, f0=f0,
+#                        npoint=maxz, time_range=time_range)
+
+src_term = src.inject(field=save_src[time, source_id[x,y,z]], expr=src)
 # tmp = Constant(name='tmp')
 
 # tmp = source_id
 
-src_term = src.inject(field=save_src[time, source_id], expr=src)
-
-redir_term = Eq(save_src[time, id_dim], source_id)
+# src_term = src.inject(field=u2, expr=src)
 
 op = Operator([src_term])
 print(op.ccode)
