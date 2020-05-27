@@ -1,5 +1,6 @@
 import numpy as np
 from devito.logger import info
+from devito import configuration, norm
 from examples.seismic.viscoacoustic import ViscoacousticWaveSolver
 from examples.seismic import demo_model, setup_geometry, seismic_args
 
@@ -37,8 +38,7 @@ def run(shape=(50, 50), spacing=(20.0, 20.0), tn=1000.0,
 
 def test_viscoacoustic():
     _, _, _, [rec] = run()
-    norm = lambda x: np.linalg.norm(x.data.reshape(-1))
-    assert np.isclose(norm(rec), 18.7749, atol=1e-3, rtol=0)
+    assert np.isclose(norm(rec), 24.0908, atol=1e-3, rtol=0)
 
 
 if __name__ == "__main__":
