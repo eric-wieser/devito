@@ -1,3 +1,5 @@
+import numpy as np # noqa
+
 from examples.seismic import demo_model, setup_geometry, seismic_args
 from examples.seismic.tti import AnisotropicWaveSolver
 
