@@ -10,6 +10,7 @@ import cgen as c
 from devito.ir import (ArrayCast, Element, List, LocalExpression, FindSymbols,
                        MapExprStmts, Transformer)
 from devito.passes.iet.engine import iet_pass
+from devito.passes.iet.openmp import Ompizer
 from devito.symbolics import ccode
 from devito.tools import as_tuple
 
@@ -21,6 +22,7 @@ class Storage(object):
     def __init__(self):
         self._high_bw_mem = OrderedDict()
         self._low_lat_mem = OrderedDict()
+        self._thread_mem = OrderedDict()
 
     @property
     def _on_low_lat_mem(self):
@@ -38,6 +40,8 @@ class Storage(object):
 
 
 class DataManager(object):
+
+    _Parallelizer = Ompizer
 
     def _alloc_object_on_low_lat_mem(self, scope, obj, storage):
         """Allocate a LocalObject in the low latency memory."""
@@ -86,6 +90,44 @@ class DataManager(object):
 
         handle[obj] = (decl, alloc, free)
 
+    def _alloc_array_slice_per_thread(self, scope, obj, storage):
+        """
+        For an Array whose outermost is a ThreadDimension, allocate each of its slices
+        in the high bandwidth memory.
+        """
+        # Construct the definition for a pointer array that is `nthreads` long
+        handle = storage._high_bw_mem.setdefault(scope, OrderedDict())
+
+        if obj in handle:
+            return
+
+        tid = obj.dimensions[0]
+        assert tid.is_Thread
+
+        decl = "(*%s)%s" % (obj.name, "".join("[%s]" % i for i in obj.symbolic_shape[1:]))
+        decl = c.Value(obj._C_typedata, decl)
+
+        shape = "[%s]" % tid.symbolic_size
+        alloc = "posix_memalign((void**)&%s, %d, sizeof(%s%s))"
+        alloc = alloc % (obj.name, obj._data_alignment, obj._C_typedata, shape)
+        alloc = c.Statement(alloc)
+
+        free = c.Statement('free(%s)' % obj.name)
+
+        handle[obj] = (decl, alloc, free)
+
+        # Construct parallel pointer allocation
+        handle = storage._thread_mem.setdefault((scope, tid), OrderedDict())
+
+        shape = "".join("[%s]" % i for i in obj.symbolic_shape[1:])
+        alloc = "posix_memalign((void**)&%s[%s], %d, sizeof(%s%s))"
+        alloc = alloc % (obj.name, tid.name, obj._data_alignment, obj._C_typedata, shape)
+        alloc = c.Statement(alloc)
+
+        free = c.Statement('free(%s[%s])' % (obj.name, tid.name))
+
+        handle[obj] = (alloc, free)
+
     def _dump_storage(self, iet, storage):
         mapper = {}
 
@@ -109,6 +151,17 @@ class DataManager(object):
                             body=as_tuple(mapper.get(scope)) + scope.body,
                             footer=footer)
                 mapper[scope] = scope._rebuild(body=body, **scope.args_frozen)
+
+        for (scope, tid), handle in storage._thread_mem.items():
+            body = List(header=[alloc for alloc, _ in handle.values()])
+            top = self._Parallelizer._Region(body, tid.symbolic_size)
+
+            body = List(header=[free for _, free in handle.values()])
+            bottom = self._Parallelizer._Region(body, tid.symbolic_size)
+
+            a = List(body=[top, mapper.get(scope, scope), bottom])
+            mapper[scope] = a
+            from IPython import embed; embed()
 
         processed = Transformer(mapper, nested=True).visit(iet)
 
@@ -159,10 +212,20 @@ class DataManager(object):
                                 if n.is_ParallelBlock:
                                     site = n
                                     break
-                        if i._mem_heap:
-                            self._alloc_array_on_high_bw_mem(site, i, storage)
+                            if i._mem_heap:
+                                self._alloc_array_on_high_bw_mem(site, i, storage)
+                            else:
+                                self._alloc_array_on_low_lat_mem(site, i, storage)
                         else:
-                            self._alloc_array_on_low_lat_mem(site, i, storage)
+                            if i._mem_heap:
+                                if i.dimensions[0].is_Thread:
+                                    # Optimization: each thread allocates its own
+                                    # logically private slice
+                                    self._alloc_array_slice_per_thread(site, i, storage)
+                                else:
+                                    self._alloc_array_on_high_bw_mem(site, i, storage)
+                            else:
+                                self._alloc_array_on_low_lat_mem(site, i, storage)
                 except AttributeError:
                     # E.g., a generic SymPy expression
                     pass
