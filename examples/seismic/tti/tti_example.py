@@ -1,6 +1,3 @@
-import numpy as np
-
-from devito import norm
 from examples.seismic import demo_model, setup_geometry, seismic_args
 from examples.seismic.tti import AnisotropicWaveSolver
 
@@ -27,11 +24,6 @@ def run(shape=(50, 50, 50), spacing=(20.0, 20.0, 20.0), tn=250.0,
     rec, u, v, summary = solver.forward(autotune=autotune, kernel=kernel)
 
     return summary.gflopss, summary.oi, summary.timings, [rec, u, v]
-
-
-def test_tti():
-    _, _, _, [rec, _, _] = run()
-    assert np.isclose(norm(rec), 960.5328, atol=1e-3, rtol=0)
 
 
 if __name__ == "__main__":

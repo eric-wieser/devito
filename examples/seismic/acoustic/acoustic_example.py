@@ -1,7 +1,7 @@
 import numpy as np
 
 from devito.logger import info
-from devito import Constant, Function, smooth, norm
+from devito import Constant, Function, smooth
 from examples.seismic.acoustic import AcousticWaveSolver
 from examples.seismic import demo_model, setup_geometry, seismic_args
 
@@ -60,11 +60,6 @@ def run(shape=(50, 50, 50), spacing=(20.0, 20.0, 20.0), tn=1000.0,
     info("Applying Gradient")
     solver.jacobian_adjoint(rec, u, autotune=autotune, checkpointing=checkpointing)
     return summary.gflopss, summary.oi, summary.timings, [rec, u.data]
-
-
-def test_acoustic():
-    _, _, _, [rec, _] = run()
-    assert np.isclose(norm(rec), 459.06458, atol=1e-3, rtol=0)
 
 
 if __name__ == "__main__":
