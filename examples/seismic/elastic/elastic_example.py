@@ -29,7 +29,7 @@ def run(shape=(50, 50), spacing=(20.0, 20.0), tn=1000.0,
     info("Applying Forward")
     # Define receiver geometry (spread across x, just below surface)
     rec1, rec2, v, tau, summary = solver.forward(autotune=autotune)
-
+    print(norm(rec1))
     return (summary.gflopss, summary.oi, summary.timings,
             [rec1, rec2, v, tau])
 
@@ -49,6 +49,8 @@ if __name__ == "__main__":
     shape = args.shape[:args.ndim]
     spacing = tuple(ndim * [10.0])
     tn = 750. if ndim < 3 else 1250.
+    dtype = eval((''.join(['np.', args.dtype])))
 
     run(shape=shape, spacing=spacing, nbl=args.nbl, tn=tn, opt=args.opt,
-        space_order=args.space_order, autotune=args.autotune, constant=args.constant)
+        space_order=args.space_order, autotune=args.autotune, constant=args.constant,
+        dtype=dtype)

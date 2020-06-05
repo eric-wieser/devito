@@ -206,4 +206,6 @@ def seismic_args(description):
                         help="Operator auto-tuning mode")
     parser.add_argument('--noazimuth', dest='azi', default=False, action='store_true',
                         help="Whether or not to use an azimuth angle")
+    parser.add_argument("-dtype", dest="dtype", default='float32',
+                        choices=['float32', 'float64'])
     return parser.parse_args()
