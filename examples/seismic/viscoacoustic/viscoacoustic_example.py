@@ -1,4 +1,6 @@
 import numpy as np
+import pytest
+
 from devito.logger import info
 from devito import norm
 from examples.seismic.viscoacoustic import ViscoacousticWaveSolver
@@ -36,7 +38,11 @@ def run(shape=(50, 50), spacing=(20.0, 20.0), tn=1000.0,
     return (summary.gflopss, summary.oi, summary.timings, [rec])
 
 
-def test_viscoacoustic():
+@pytest.mark.parametrize("dtype", [("float32"), ("float64")])
+def test_viscoacoustic(dtype):
+
+    dtype = eval((''.join(['np.', dtype])))
+
     _, _, _, [rec] = run()
     assert np.isclose(norm(rec), 18.7749, atol=1e-3, rtol=0)
 

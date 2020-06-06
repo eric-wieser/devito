@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from devito import norm
 from devito.logger import info
@@ -34,7 +35,11 @@ def run(shape=(50, 50), spacing=(20.0, 20.0), tn=1000.0,
             [rec1, rec2, v, tau])
 
 
-def test_viscoelastic():
+@pytest.mark.parametrize("dtype", [("float32"), ("float64")])
+def test_viscoelastic(dtype):
+
+    dtype = eval((''.join(['np.', dtype])))
+
     _, _, _, [rec1, rec2, v, tau] = run()
     assert np.isclose(norm(rec1), 12.5694, atol=1e-3, rtol=0)
     assert np.isclose(norm(rec2), 0.29526, atol=1e-3, rtol=0)

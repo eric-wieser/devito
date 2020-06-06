@@ -1,5 +1,5 @@
 import numpy as np
-
+import pytest
 from devito import norm
 from devito.logger import info
 from examples.seismic.elastic import ElasticWaveSolver
@@ -34,10 +34,14 @@ def run(shape=(50, 50), spacing=(20.0, 20.0), tn=1000.0,
             [rec1, rec2, v, tau])
 
 
-def test_elastic():
-    _, _, _, [rec1, rec2, v, tau] = run()
-    assert np.isclose(norm(rec1), 20.59193, atol=1e-3, rtol=0)
-    assert np.isclose(norm(rec2), 0.671578, atol=1e-3, rtol=0)
+@pytest.mark.parametrize("dtype", [("float32"), ("float64")])
+def test_elastic(dtype):
+
+    dtype = eval((''.join(['np.', dtype])))
+
+    _, _, _, [rec1, rec2, v, tau] = run(dtype=dtype)
+    assert np.isclose(norm(rec1), 19.33504, atol=1e-3, rtol=0)
+    assert np.isclose(norm(rec2), 0.630199, atol=1e-3, rtol=0)
 
 
 if __name__ == "__main__":
