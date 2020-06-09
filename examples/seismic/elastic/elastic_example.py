@@ -40,8 +40,8 @@ def test_elastic(dtype):
     dtype = eval((''.join(['np.', dtype])))
 
     _, _, _, [rec1, rec2, v, tau] = run(dtype=dtype)
-    assert np.isclose(norm(rec1), 19.33504, atol=1e-3, rtol=0)
-    assert np.isclose(norm(rec2), 0.630199, atol=1e-3, rtol=0)
+    assert np.isclose(norm(rec1), 20.59193, atol=1e-3, rtol=0)
+    assert np.isclose(norm(rec2), 0.671578, atol=1e-3, rtol=0)
 
 
 if __name__ == "__main__":
